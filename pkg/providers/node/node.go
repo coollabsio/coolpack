@@ -130,6 +130,11 @@ func (p *Provider) Plan(ctx *app.Context) (*app.Plan, error) {
 		plan.Metadata["base_image"] = baseImage
 	}
 
+	// Check for output directory override
+	if outputDir := ctx.Env["COOLPACK_SPA_OUTPUT_DIR"]; outputDir != "" {
+		plan.Metadata["output_dir_override"] = outputDir
+	}
+
 	// Detect Cypress for cache
 	if pkg.HasDependency("cypress") {
 		plan.Metadata["has_cypress"] = true

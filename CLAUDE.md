@@ -19,6 +19,7 @@ A general purpose build pack for applications. Detects application type, generat
   - `-b, --build-cmd` - Override build command
   - `-s, --start-cmd` - Override start command
   - `--static-server` - Static file server: `caddy` (default), `nginx`
+  - `--output-dir` - Override static output directory (e.g., `dist`, `build`, `out`)
   - `--spa` - Enable SPA mode (serves index.html for all routes)
   - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
@@ -30,6 +31,7 @@ A general purpose build pack for applications. Detects application type, generat
   - `-b, --build-cmd` - Override build command
   - `-s, --start-cmd` - Override start command
   - `--static-server` - Static file server: `caddy` (default), `nginx`
+  - `--output-dir` - Override static output directory (e.g., `dist`, `build`, `out`)
   - `--spa` - Enable SPA mode (serves index.html for all routes)
   - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
@@ -37,6 +39,7 @@ A general purpose build pack for applications. Detects application type, generat
   - `-n, --name` - Image name (defaults to directory name)
   - `-t, --tag` - Image tag (default "latest")
   - `-e, --env` - Runtime environment variables (KEY=value)
+- `coolpack version` - Print version information
 
 ## Environment Variables
 
@@ -305,11 +308,16 @@ Each directory will be cached between builds using BuildKit cache mounts.
 coolpack/
 ├── main.go                          # Entry point
 ├── build.sh                         # Build script
+├── .goreleaser.yml                  # GoReleaser config for releases
+├── .github/workflows/
+│   └── release.yml                  # GitHub Actions release workflow
 ├── cmd/coolpack/
 │   ├── root.go                      # Root CLI command
 │   ├── plan.go                      # Plan subcommand
 │   ├── prepare.go                   # Prepare subcommand (Dockerfile generation)
-│   └── build.go                     # Build subcommand (stub)
+│   ├── build.go                     # Build subcommand
+│   ├── run.go                       # Run subcommand
+│   └── version.go                   # Version subcommand
 └── pkg/
     ├── app/
     │   ├── context.go               # App context (path, env, file helpers)
@@ -319,6 +327,8 @@ coolpack/
     │   └── types.go                 # Provider interface
     ├── generator/
     │   └── generator.go             # Dockerfile generation
+    ├── version/
+    │   └── version.go               # Version info and update checker
     └── providers/node/
         ├── node.go                  # Node.js provider
         ├── package_json.go          # package.json parsing
@@ -351,3 +361,25 @@ Uses [tree-sitter](https://github.com/smacker/go-tree-sitter) for parsing JavaSc
    - `Detect(ctx *app.Context) (bool, error)`
    - `Plan(ctx *app.Context) (*app.Plan, error)`
 3. Register in `pkg/detector/detector.go` `registerProviders()`
+
+## Releases
+
+Releases are automated via GitHub Actions using [GoReleaser](https://goreleaser.com/).
+
+**To create a release:**
+1. Create a new release on GitHub with a tag (e.g., `v1.0.0`)
+2. GitHub Actions will automatically build binaries for:
+   - Linux (amd64, arm64)
+   - macOS (amd64, arm64)
+   - Windows (amd64, arm64)
+3. Binaries are attached to the release with checksums
+
+**Files:**
+- `.github/workflows/release.yml` - GitHub Actions workflow
+- `.goreleaser.yml` - GoReleaser configuration
+- `cmd/coolpack/version.go` - Version command
+
+**Local build with version:**
+```bash
+VERSION=v1.0.0 ./build.sh
+```

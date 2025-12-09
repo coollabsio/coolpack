@@ -344,6 +344,12 @@ func (g *Generator) writeServerCopyStatements(sb *strings.Builder, pm string) {
 }
 
 func (g *Generator) getStaticOutputDir() string {
+	// Check for user override first (CLI flag or COOLPACK_SPA_OUTPUT_DIR env var)
+	if override, ok := g.plan.Metadata["output_dir_override"].(string); ok && override != "" {
+		return override
+	}
+
+	// Framework-specific defaults
 	framework := g.plan.Framework
 
 	switch framework {

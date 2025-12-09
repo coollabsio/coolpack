@@ -95,6 +95,7 @@ coolpack prepare --build-cmd "npm run build:prod"
 | `-b, --build-cmd` | Override build command |
 | `-s, --start-cmd` | Override start command |
 | `--static-server` | Static server: `caddy` (default), `nginx` |
+| `--output-dir` | Override static output directory (e.g., `dist`, `build`) |
 | `--spa` | Enable SPA mode (serves index.html for all routes) |
 | `--no-spa` | Disable SPA mode (overrides auto-detection) |
 | `--build-env` | Build-time env vars (KEY=value or KEY) |
@@ -120,6 +121,7 @@ coolpack build --no-cache
 | `-b, --build-cmd` | Override build command |
 | `-s, --start-cmd` | Override start command |
 | `--static-server` | Static server: `caddy` (default), `nginx` |
+| `--output-dir` | Override static output directory (e.g., `dist`, `build`) |
 | `--spa` | Enable SPA mode (serves index.html for all routes) |
 | `--no-spa` | Disable SPA mode (overrides auto-detection) |
 | `--build-env` | Build-time env vars |
@@ -140,6 +142,14 @@ coolpack run -e DATABASE_URL=postgres://localhost/db
 | `-t, --tag` | Image tag |
 | `-e, --env` | Runtime env vars (KEY=value) |
 
+### `coolpack version`
+
+Print version information.
+
+```bash
+coolpack version
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -154,8 +164,10 @@ Override Coolpack behavior with environment variables:
 | `COOLPACK_BASE_IMAGE` | Override base Docker image | Provider-specific |
 | `COOLPACK_NODE_VERSION` | Override Node.js version | Auto-detected or `24` |
 | `COOLPACK_STATIC_SERVER` | Static file server | `caddy` |
+| `COOLPACK_SPA_OUTPUT_DIR` | Override static output directory | Framework-specific |
 | `COOLPACK_SPA` | Enable SPA mode | Auto-detected |
 | `COOLPACK_NO_SPA` | Disable SPA mode | `false` |
+| `NODE_VERSION` | Alternative to `COOLPACK_NODE_VERSION` (legacy) | - |
 
 **Priority:** CLI flags > Environment variables > Auto-detected
 

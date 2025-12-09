@@ -1,0 +1,19 @@
+# Binary
+coolpack
+
+# Build output
+.coolpack/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage/
+*.test

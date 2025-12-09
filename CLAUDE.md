@@ -308,7 +308,6 @@ Each directory will be cached between builds using BuildKit cache mounts.
 coolpack/
 ├── main.go                          # Entry point
 ├── build.sh                         # Build script
-├── .goreleaser.yml                  # GoReleaser config for releases
 ├── .github/workflows/
 │   └── release.yml                  # GitHub Actions release workflow
 ├── cmd/coolpack/
@@ -364,20 +363,20 @@ Uses [tree-sitter](https://github.com/smacker/go-tree-sitter) for parsing JavaSc
 
 ## Releases
 
-Releases are automated via GitHub Actions using [GoReleaser](https://goreleaser.com/).
+Releases are automated via GitHub Actions with native builds (CGO enabled for tree-sitter).
 
 **To create a release:**
 1. Create a new release on GitHub with a tag (e.g., `v1.0.0`)
 2. GitHub Actions will automatically build binaries for:
    - Linux (amd64, arm64)
    - macOS (amd64, arm64)
-   - Windows (amd64, arm64)
+   - Windows (amd64)
 3. Binaries are attached to the release with checksums
+4. Version file (`pkg/version/version.go`) is updated automatically
 
 **Files:**
 - `.github/workflows/release.yml` - GitHub Actions workflow
-- `.goreleaser.yml` - GoReleaser configuration
-- `cmd/coolpack/version.go` - Version command
+- `pkg/version/version.go` - Version info and update checker
 
 **Local build with version:**
 ```bash

@@ -8,8 +8,35 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        include:
+          # Linux builds on ubuntu
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            cc: gcc
+          - os: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            cc: gcc
+          # macOS builds
+          - os: macos-13
+            goos: darwin
+            goarch: amd64
+            cc: clang
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            cc: clang
+          # Windows build
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            cc: gcc
+
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,17 +48,86 @@ jobs:
         with:
           go-version: stable
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - name: Get version
+        id: version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+          CC: ${{ matrix.cc }}
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          LDFLAGS="-s -w"
+          LDFLAGS="$LDFLAGS -X github.com/coollabsio/coolpack/pkg/version.Version=$VERSION"
+          LDFLAGS="$LDFLAGS -X github.com/coollabsio/coolpack/pkg/version.Commit=$COMMIT"
+          LDFLAGS="$LDFLAGS -X github.com/coollabsio/coolpack/pkg/version.Date=$DATE"
+
+          OUTPUT="coolpack_${{ matrix.goos }}_${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUTPUT="${OUTPUT}.exe"
+          fi
+
+          go build -ldflags "$LDFLAGS" -o "$OUTPUT" .
+
+      - name: Create archive (Unix)
+        if: matrix.goos != 'windows'
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          ARCHIVE="coolpack_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
+          tar -czvf "$ARCHIVE" "coolpack_${{ matrix.goos }}_${{ matrix.goarch }}"
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Create archive (Windows)
+        if: matrix.goos == 'windows'
+        shell: bash
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          ARCHIVE="coolpack_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
+          zip "$ARCHIVE" "coolpack_${{ matrix.goos }}_${{ matrix.goarch }}.exe"
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
         with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
+          files: ${{ env.ARCHIVE }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  checksum:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: robinraju/release-downloader@v1
+        with:
+          tag: ${{ github.ref_name }}
+          fileName: "coolpack_*"
+          out-file-path: "dist"
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum coolpack_* > checksums.txt
+          cat checksums.txt
+
+      - name: Upload checksums
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-version:
-    needs: [release]
+    needs: [build, checksum]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -50,8 +146,3 @@ jobs:
           git add pkg/version/version.go
           git commit -m "chore: bump version to $TAG"
           git push origin main
-
-          # Move the tag to point to the new commit with updated version
-          git tag -d "$TAG" || true
-          git tag "$TAG"
-          git push origin "refs/tags/$TAG" --force

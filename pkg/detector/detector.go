@@ -73,6 +73,9 @@ func loadRelevantEnvVars() map[string]string {
 		"COOLPACK_SPA_OUTPUT_DIR",
 		// Static server (caddy or nginx)
 		"COOLPACK_STATIC_SERVER",
+		// SPA mode
+		"COOLPACK_SPA",
+		"COOLPACK_NO_SPA",
 		// Legacy support
 		"NODE_VERSION",
 	}

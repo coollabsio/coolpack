@@ -95,6 +95,8 @@ coolpack prepare --build-cmd "npm run build:prod"
 | `-b, --build-cmd` | Override build command |
 | `-s, --start-cmd` | Override start command |
 | `--static-server` | Static server: `caddy` (default), `nginx` |
+| `--spa` | Enable SPA mode (serves index.html for all routes) |
+| `--no-spa` | Disable SPA mode (overrides auto-detection) |
 | `--build-env` | Build-time env vars (KEY=value or KEY) |
 
 ### `coolpack build [path]`
@@ -118,6 +120,8 @@ coolpack build --no-cache
 | `-b, --build-cmd` | Override build command |
 | `-s, --start-cmd` | Override start command |
 | `--static-server` | Static server: `caddy` (default), `nginx` |
+| `--spa` | Enable SPA mode (serves index.html for all routes) |
+| `--no-spa` | Disable SPA mode (overrides auto-detection) |
 | `--build-env` | Build-time env vars |
 
 ### `coolpack run [path]`
@@ -147,11 +151,19 @@ Override Coolpack behavior with environment variables:
 | `COOLPACK_INSTALL_CMD` | Override install command | Auto-detected |
 | `COOLPACK_BUILD_CMD` | Override build command | Auto-detected |
 | `COOLPACK_START_CMD` | Override start command | Auto-detected |
-| `COOLPACK_BASE_IMAGE` | Override base Docker image | `node:<version>-slim` |
+| `COOLPACK_BASE_IMAGE` | Override base Docker image | Provider-specific |
 | `COOLPACK_NODE_VERSION` | Override Node.js version | Auto-detected or `24` |
 | `COOLPACK_STATIC_SERVER` | Static file server | `caddy` |
+| `COOLPACK_SPA` | Enable SPA mode | Auto-detected |
+| `COOLPACK_NO_SPA` | Disable SPA mode | `false` |
 
 **Priority:** CLI flags > Environment variables > Auto-detected
+
+**Default Base Images by Provider:**
+| Provider | Default Base Image |
+|----------|-------------------|
+| Node.js | `node:<version>-slim` |
+| Node.js (bun) | `oven/bun:<version>-slim` |
 
 ### Build-time vs Runtime Environment Variables
 
@@ -249,6 +261,18 @@ coolpack build \
 
 ```bash
 coolpack build --static-server nginx
+```
+
+### SPA with Client-side Routing
+
+For Single Page Applications, Coolpack auto-detects client-side routers (vue-router, react-router-dom, etc.) and configures the server to serve `index.html` for all routes:
+
+```bash
+# Auto-detected when vue-router, react-router-dom, etc. is found
+coolpack build
+
+# Manual override
+coolpack build --spa
 ```
 
 ---

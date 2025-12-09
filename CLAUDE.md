@@ -19,6 +19,8 @@ A general purpose build pack for applications. Detects application type, generat
   - `-b, --build-cmd` - Override build command
   - `-s, --start-cmd` - Override start command
   - `--static-server` - Static file server: `caddy` (default), `nginx`
+  - `--spa` - Enable SPA mode (serves index.html for all routes)
+  - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
 - `coolpack build [path]` - Build container image
   - `-n, --name` - Image name (defaults to directory name)
@@ -28,6 +30,8 @@ A general purpose build pack for applications. Detects application type, generat
   - `-b, --build-cmd` - Override build command
   - `-s, --start-cmd` - Override start command
   - `--static-server` - Static file server: `caddy` (default), `nginx`
+  - `--spa` - Enable SPA mode (serves index.html for all routes)
+  - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
 - `coolpack run [path]` - Run container (**DEVELOPMENT ONLY**)
   - `-n, --name` - Image name (defaults to directory name)
@@ -43,13 +47,21 @@ Coolpack behavior can be configured via environment variables:
 | `COOLPACK_INSTALL_CMD` | Override install command | Auto-detected |
 | `COOLPACK_BUILD_CMD` | Override build command | Auto-detected |
 | `COOLPACK_START_CMD` | Override start command | Auto-detected |
-| `COOLPACK_BASE_IMAGE` | Override the base Docker image (e.g., `node:20-alpine`) | `node:<version>-slim` |
+| `COOLPACK_BASE_IMAGE` | Override the base Docker image (e.g., `node:20-alpine`) | Provider-specific |
 | `COOLPACK_NODE_VERSION` | Override Node.js version | Auto-detected or `24` |
 | `COOLPACK_STATIC_SERVER` | Static file server for static sites | `caddy` |
+| `COOLPACK_SPA` | Enable SPA mode (serves index.html for all routes) | Auto-detected |
+| `COOLPACK_NO_SPA` | Disable SPA mode (overrides auto-detection) | `false` |
 | `COOLPACK_SPA_OUTPUT_DIR` | Override static output directory | Framework-specific |
 | `NODE_VERSION` | Alternative to `COOLPACK_NODE_VERSION` (legacy) | - |
 
 **Priority**: CLI flags > Environment variables > Auto-detected
+
+**Default Base Images by Provider**:
+| Provider | Default Base Image |
+|----------|-------------------|
+| Node.js | `node:<version>-slim` |
+| Node.js (bun) | `oven/bun:<version>-slim` |
 
 Example:
 ```bash
@@ -184,6 +196,31 @@ The `prepare` command generates Dockerfiles in `.coolpack/` directory:
 - Exposes port 80
 - Use `--static-server nginx` or `COOLPACK_STATIC_SERVER=nginx` to use nginx instead
 - Framework-specific output directories (dist, out, build, etc.)
+
+### SPA Mode
+
+Single Page Applications need the server to serve `index.html` for all routes so the client-side router can handle them.
+
+**Auto-detection**: Coolpack detects SPA mode when:
+- Output type is `static`
+- Project has a client-side router dependency:
+  - `vue-router`
+  - `react-router-dom`, `react-router`, `@reach/router`, `wouter`, `@tanstack/react-router`
+  - `svelte-navigator`, `svelte-routing`, `@roxi/routify`
+  - `@solidjs/router`, `solid-app-router`
+  - `preact-router`
+
+**Not auto-detected** for static site generators (Gatsby, Eleventy, Next.js export, Nuxt generate, Astro) that generate HTML for each route.
+
+**Manual override**:
+```bash
+coolpack build --spa
+COOLPACK_SPA=true coolpack build
+```
+
+When SPA mode is enabled:
+- Caddy uses a Caddyfile with `try_files {path} /index.html`
+- nginx uses `try_files $uri $uri/ /index.html`
 
 ### Build Environment Variables
 

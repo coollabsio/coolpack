@@ -145,7 +145,61 @@ func (p *Provider) Plan(ctx *app.Context) (*app.Plan, error) {
 		plan.Metadata["cache_directories"] = pkg.CacheDirectories
 	}
 
+	// Detect SPA (only for static output)
+	if outputType := plan.Metadata["output_type"]; outputType == "static" {
+		if isSPA := detectSPA(pkg, fwInfo); isSPA {
+			plan.Metadata["is_spa"] = true
+		}
+	}
+
 	return plan, nil
+}
+
+// detectSPA checks if the application is a Single Page Application
+// by looking for client-side router dependencies
+func detectSPA(pkg *PackageJSON, fw FrameworkInfo) bool {
+	// Frameworks that handle routing server-side or generate static HTML per route
+	// don't need SPA fallback even in static mode
+	switch fw.Name {
+	case FrameworkGatsby, FrameworkEleventy:
+		// Static site generators that create HTML for each route
+		return false
+	case FrameworkNextJS, FrameworkNuxt, FrameworkAstro:
+		// These generate static HTML per route in export mode
+		return false
+	}
+
+	// Client-side router dependencies indicate SPA
+	spaRouters := []string{
+		// Vue
+		"vue-router",
+		// React
+		"react-router-dom",
+		"react-router",
+		"@reach/router",
+		"wouter",
+		"@tanstack/react-router",
+		// Svelte (not SvelteKit)
+		"svelte-navigator",
+		"svelte-routing",
+		"@roxi/routify",
+		// Solid
+		"@solidjs/router",
+		"solid-app-router",
+		// Preact
+		"preact-router",
+		// General
+		"navigo",
+		"page",
+	}
+
+	for _, router := range spaRouters {
+		if pkg.HasDependency(router) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // determineBuildCommand determines the build command to use

@@ -197,6 +197,12 @@ func (g *Generator) writeCaddyStaticStage(sb *strings.Builder, outputDir string)
 	// Copy built static files
 	sb.WriteString(fmt.Sprintf("COPY --from=builder /app/%s /srv\n\n", outputDir))
 
+	// Add SPA Caddyfile if needed
+	if g.isSPA() {
+		sb.WriteString("# SPA routing: serve index.html for all routes\n")
+		sb.WriteString("RUN printf '%s\\n' ':80 {' '    root * /srv' '    try_files {path} /index.html' '    file_server' '}' > /etc/caddy/Caddyfile\n\n")
+	}
+
 	// Set ownership
 	sb.WriteString("RUN chown -R cooluser:coolgroup /srv\n\n")
 
@@ -205,8 +211,13 @@ func (g *Generator) writeCaddyStaticStage(sb *strings.Builder, outputDir string)
 	// Expose port
 	sb.WriteString("EXPOSE 80\n\n")
 
-	// Caddy file-server command
-	sb.WriteString("CMD [\"caddy\", \"file-server\", \"--root\", \"/srv\", \"--listen\", \":80\"]\n")
+	// Caddy command
+	if g.isSPA() {
+		// Use Caddyfile for SPA routing
+		sb.WriteString("CMD [\"caddy\", \"run\", \"--config\", \"/etc/caddy/Caddyfile\"]\n")
+	} else {
+		sb.WriteString("CMD [\"caddy\", \"file-server\", \"--root\", \"/srv\", \"--listen\", \":80\"]\n")
+	}
 }
 
 func (g *Generator) writeNginxStaticStage(sb *strings.Builder, outputDir string) {
@@ -228,12 +239,33 @@ func (g *Generator) writeNginxStaticStage(sb *strings.Builder, outputDir string)
 	// Copy built static files to nginx
 	sb.WriteString(fmt.Sprintf("COPY --from=builder /app/%s /usr/share/nginx/html\n\n", outputDir))
 
+	// Add SPA nginx config if needed
+	if g.isSPA() {
+		sb.WriteString("# SPA routing: serve index.html for all routes\n")
+		sb.WriteString("RUN echo 'server { \\\n")
+		sb.WriteString("    listen 80; \\\n")
+		sb.WriteString("    root /usr/share/nginx/html; \\\n")
+		sb.WriteString("    index index.html; \\\n")
+		sb.WriteString("    location / { \\\n")
+		sb.WriteString("        try_files $uri $uri/ /index.html; \\\n")
+		sb.WriteString("    } \\\n")
+		sb.WriteString("}' > /etc/nginx/conf.d/default.conf\n\n")
+	}
+
 	sb.WriteString("USER cooluser\n\n")
 
 	// Expose port
 	sb.WriteString("EXPOSE 80\n\n")
 
 	sb.WriteString("CMD [\"nginx\", \"-g\", \"daemon off;\"]\n")
+}
+
+// isSPA returns true if the application is a Single Page Application
+func (g *Generator) isSPA() bool {
+	if isSPA, ok := g.plan.Metadata["is_spa"].(bool); ok {
+		return isSPA
+	}
+	return false
 }
 
 func (g *Generator) writePackageManagerInstall(sb *strings.Builder, pm string) {

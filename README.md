@@ -13,6 +13,8 @@ A general-purpose build pack that automatically detects your application type, g
 
 ## Supported Frameworks
 
+More coming soon, we will support a bunch of them, not just Javascript based.
+
 | Framework | Output Types |
 |-----------|--------------|
 | Next.js | Server (SSR) / Static |

@@ -50,7 +50,11 @@ func (g *Generator) generateNodeDockerfile() (string, error) {
 		if g.plan.PackageManagerVersion != "" {
 			bunVersion = g.plan.PackageManagerVersion
 		}
-		baseImage = fmt.Sprintf("oven/bun:%s-slim", bunVersion)
+		if bunVersion != "latest" {
+			baseImage = fmt.Sprintf("oven/bun:%s-slim", bunVersion)
+		} else {
+			baseImage = "oven/bun:latest"
+		}
 	} else {
 		baseImage = fmt.Sprintf("node:%s-slim", nodeVersion)
 	}

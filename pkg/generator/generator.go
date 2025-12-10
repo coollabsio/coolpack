@@ -50,7 +50,11 @@ func (g *Generator) generateNodeDockerfile() (string, error) {
 		if g.plan.PackageManagerVersion != "" {
 			bunVersion = g.plan.PackageManagerVersion
 		}
-		baseImage = fmt.Sprintf("oven/bun:%s-slim", bunVersion)
+		if bunVersion != "latest" {
+			baseImage = fmt.Sprintf("oven/bun:%s-slim", bunVersion)
+		} else {
+			baseImage = "oven/bun:latest"
+		}
 	} else {
 		baseImage = fmt.Sprintf("node:%s-slim", nodeVersion)
 	}
@@ -112,8 +116,8 @@ func (g *Generator) writeServerDockerfile(sb *strings.Builder, baseImage string)
 	g.writePackageManagerInstall(sb, pm)
 
 	// Create non-root user
-	sb.WriteString("RUN addgroup --system --gid 1001 coolgroup && \\\n")
-	sb.WriteString("    adduser --system --uid 1001 --ingroup coolgroup cooluser\n\n")
+	sb.WriteString("RUN groupadd --gid 1001 coolgroup &&\\\n")
+	sb.WriteString("    useradd --uid 1001 --gid 1001 cooluser\n\n")
 
 	// Set production environment (build envs are NOT included - pass at runtime via docker run -e)
 	sb.WriteString("ENV NODE_ENV=production\n\n")
